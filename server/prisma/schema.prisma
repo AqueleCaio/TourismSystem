@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// DATABASE_URL="postgresql://postgres:123@localhost:5433/tourism_db?schema=public"
+
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  username      String    @unique @db.VarChar(50)
+  email         String?   @unique @db.VarChar(100)
+  password_hash String    @db.VarChar(255)
+  tierLists     TierList[]
+  visitedCountries VisitedCountry[]
+  @@map("users")
+}
+
+model Indicator {
+  id           String       @id @db.VarChar(20)
+  name         String       @db.VarChar(100)
+  tourismData  TourismData[]
+  @@map("indicators")
+}
+
+model Country {
+  id               String            @id @db.VarChar(20)
+  name             String            @db.VarChar(100)
+  iso3code         String           @unique @db.VarChar(10)
+  tourismData      TourismData[]
+  tierListItems    TierListItem[]
+  visitedCountries VisitedCountry[]
+
+  @@map("countries")
+}
+
+
+model TourismData {
+  id           Int      @id @default(autoincrement())
+  indicator    Indicator @relation(fields: [indicator_id], references: [id])
+  indicator_id String   @db.VarChar(20)
+  country      Country  @relation(fields: [country_id], references: [id])
+  country_id   String   @db.VarChar(20)
+  year         Int
+  value        Float?
+  unit         String?  @db.VarChar(50)
+  obs_status   String?  @db.VarChar(50)
+  decimal      Int?     @default(0)
+
+  // Definindo a chave composta única
+  @@unique([country_id, year, indicator_id], name: "country_year_indicator")
+  @@map("tourism_data")
+}
+
+model TierList {
+  id          Int       @id @default(autoincrement())
+  user        User      @relation(fields: [user_id], references: [id])
+  user_id     Int
+  name        String    @db.VarChar(100)
+  created_at  DateTime  @default(now())
+  items       TierListItem[]
+  @@map("tier_lists")
+}
+
+model TierListItem {
+  id           Int      @id @default(autoincrement())
+  tierList     TierList @relation(fields: [tier_list_id], references: [id])
+  tier_list_id Int
+  country      Country  @relation(fields: [country_id], references: [id])
+  country_id   String   @db.VarChar(20)
+  position     Int      @default(0)
+  @@map("tier_list_items")
+}
+
+model VisitedCountry {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [user_id], references: [id])
+  user_id     Int
+  country     Country  @relation(fields: [country_id], references: [id])
+  country_id  String   @db.VarChar(20)
+  rating      Int?
+  visited_at  DateTime?
+  
+  @@unique([user_id, country_id])
+  @@map("visited_countries")
+}
